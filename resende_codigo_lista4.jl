@@ -7,65 +7,61 @@ using BenchmarkTools
 
 
 @nbinclude("tauchen.ipynb") # para discretizar os choques
-@nbinclude("phi_consumo.ipynb") # Função de phi e consumo
-@nbinclude("colocacao.ipynb") # Elementos finitos + Colocação
 @nbinclude("ha_baseline.ipynb") # Elementos finitos + Galerkin
 @nbinclude("ha_equilibrio.ipynb")
-# parametros do modelo
-β = beta = 0.96
-γ = gamma = 3
-# r will clear the market
-ρ = rho = 0.9
-α = alpha = 1/3
-σ = sigma = 0.01
-δ = delta = (1-β)/β
-r = (1/β - 1)
-r_0 = 0.04
-sqrt(0.01*(1-0.3^2))
-#####################
-## grid de choques ##
-#####################
-Z, P = disc_t(9;mu= 0, sigma = 0.01, rho= 0.97, m = 3)
-S = exp.(Z)
-
-#############################
-## discretização de ativos ##
-#############################
-ϕ = -minimum(S)/((1/β) - 1)
-a_max = maximum(S)/(1/β - 1)
-grid_a = LinRange(ϕ,a_max,1000)
-########################
-## problema do agente ##
-########################
-
-#############################
-## Distribuição invariante ##
-#############################
-@time Q, λ =  dist_invariante(P; pk = k_ha)
 
 
+##########################################
+## Distribuição invariante e Equilibrio ##
+##########################################
 
-surface(c_ha)
-K,dist_a,dist_z, dist_m = hugget_capital_demand(λ;grid_a)
-surface(dist_m)
-plot(dist_a)
-plot(dist_z)
-erro2 =2
-r_max = 0.0416666
-r_min = 0
+@time R_C,inva_C, K_C = equilibrio_r(0.96,0.01,0.9,1.0001)[vec([1 2 6])]
+@time R_D,inva_D, K_D = equilibrio_r(0.96,0.01,0.97,1.0001)[vec([1 2 6])]
+@time R_E,inva_E, K_E = equilibrio_r(0.96,0.01,0.9,5)[vec([1 2 6])]
+@time R_F,inva_F, K_F = equilibrio_r(0.96,0.05,0.9,1.0001)[vec([1 2 6])]
 
-@time v_ha, k_ha, c_ha = ha_mg_acelerado([50 100 200 1000];grid_z = S,P,β = 0.96,γ = 1.0001,r = r_0)
 
-plot(c_ha)
+@time R_G,inva_G, K_G = equilibrio_r(0.96,0.05,0.9,5)[vec([1 2 6])]
+@time R_H,inva_H, K_H = equilibrio_r(0.96,0.05,0.97,1.0001)[vec([1 2 6])]
+@time R_I,inva_I, K_I = equilibrio_r(0.96,0.05,0.97,5)[vec([1 2 6])]
+@time R_J,inva_J, K_J = equilibrio_r(0.96,0.01,0.97,5)[vec([1 2 6])]
 
-R_C = equilibrio_r(0.96,0.01,0.9,1.0001)[1]
-R_D = equilibrio_r(0.96,0.01,0.97,1.0001)[1]
-R_E = equilibrio_r(0.96,0.01,0.9,5)[1]
-R_F = equilibrio_r(0.96,0.05,0.9,1.0001)[1]
+S_C = exp.(disc_t(9; mu= 0, sigma = 0.01, rho= 0.9, m = 3)[1])
+S_D = exp.(disc_t(9; mu= 0, sigma = 0.01, rho= 0.97, m = 3)[1])
+S_E = exp.(disc_t(9; mu= 0, sigma = 0.01, rho= 0.9, m = 3)[1])
+S_F = exp.(disc_t(9; mu= 0, sigma = 0.05, rho= 0.9, m = 3)[1])
 
-R_D - R_C
-K_new, dist_a, dist_z, matriz_M = hugget_capital_demand(λ;grid_a)
-r_0
-sum(matriz_M)
-plot(dist_z)
-surface(matriz_M)
+100*R_F-100*R_C
+A_C = LinRange(-minimum(S_C)/(1/0.96),4*maximum(S_C)/(1/0.96),1000)
+A_D = LinRange(-minimum(S_D)/(1/0.96),4*maximum(S_D)/(1/0.96),1000)
+A_E = LinRange(-minimum(S_E)/(1/0.96),4*maximum(S_E)/(1/0.96),1000)
+A_F = LinRange(-minimum(S_F)/(1/0.96),4*maximum(S_F)/(1/0.96),1000)
+
+plot(A_C,sum(inva_C,dims=1)', label = "ρ = 0.9, σ = 0.01, γ = 1.0001", title = "Aumento de persistência")
+plot!(A_D,sum(inva_D,dims=1)', label = "ρ = 0.97, σ = 0.01, γ = 1.0001",ylims = (0,0.04))
+
+plot(A_C,sum(inva_C,dims=1)', label = "ρ = 0.9, σ = 0.01, γ = 1.0001", title = "Aumento da Aversão ao risco")
+plot!(A_E,sum(inva_E,dims=1)', label = "ρ = 0.9, σ = 0.01, γ = 5",ylims = (0,0.015))
+
+plot(A_C,sum(inva_C,dims=1)', label = "ρ = 0.9, σ = 0.01, γ = 1.0001", title = "Aumento da variância")
+plot!(A_F,sum(inva_F,dims=1)', label = "ρ = 0.9, σ = 0.05, γ = 1.0001",ylims = (0,0.04))
+
+
+sum(inva_C,dims=1)[1]
+sum(inva_D,dims=1)[1]
+sum(inva_E,dims=1)[1]
+sum(inva_F,dims=1)[1]
+
+A_C
+A_D
+plot(S_C,sum(inva_C,dims=2), label = "ρ = 0.9, σ = 0.01, γ = 1.0001", title = "Distribuição marginal de renda")
+plot!(S_D,sum(inva_D,dims=2), label = "ρ = 0.97, σ = 0.01, γ = 1.0001")
+plot!(S_E,sum(inva_E,dims=2), label = "ρ = 0.9, σ = 0.01, γ = 5")
+plot!(S_F,sum(inva_F,dims=2), label = "ρ = 0.9, σ = 0.05, γ = 1.0001")
+
+
+plot(S_C,ones(9)*0.25, label = "ρ = 0.9, σ = 0.01, γ = 1.0001", title = "Espaço de choques para os parâmetros")
+plot!(S_D,ones(9)*0.5, label = "ρ = 0.97, σ = 0.01, γ = 1.0001")
+plot!(S_E,ones(9)*0.75, label = "ρ = 0.9, σ = 0.01, γ = 5")
+plot!(S_F,ones(9), label = "ρ = 0.9, σ = 0.05, γ = 1.0001")
+vline!([S_C[1] S_C[9]], label = nothing)
